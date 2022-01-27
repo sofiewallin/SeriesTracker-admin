@@ -7,7 +7,10 @@ const AddSeries = ({ createSeries, writeSuccessMessage }) => {
     return (
         <section className='add-series'>
             <h1>Add series</h1>
-            <AddEditForm series={null} createSeries={createSeries} writeSuccessMessage={writeSuccessMessage} />
+            <AddEditForm 
+                createSeries={createSeries} 
+                writeSuccessMessage={writeSuccessMessage} 
+            />
         </section>
     );
 }

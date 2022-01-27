@@ -2,9 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 
 import AddEditForm from './AddEditForm/AddEditForm';
-import DeletingSeries from './SeriesList/partials/DeletingSeries';
+import DeletingSeries from './App/partials/DeletingSeries';
 
-const EditSeries = ({ user, logoutUser, apiUrl, getSeriesList, deleteSeries, writeSuccessMessage }) => {
+const EditSeries = ({ 
+    user, 
+    logoutUser, 
+    apiUrl, 
+    seriesList, 
+    getSeriesList, 
+    deleteSeries, 
+    writeSuccessMessage 
+}) => {
     const { seriesId } = useParams();
     const [series, setSeries] = useState(null);
     const [error, setError] = useState(null);
@@ -15,6 +23,9 @@ const EditSeries = ({ user, logoutUser, apiUrl, getSeriesList, deleteSeries, wri
     // Get series based on id parameter
     useEffect(() => {
         (async () => {
+            const matchingSeries = seriesList.filter(seriesInList => seriesInList._id === seriesId);
+            if (matchingSeries.length === 0) return;
+            
             try {
                 const response = await fetch(`${apiUrl}/series/${seriesId}`, {
                     method: 'GET',
@@ -45,43 +56,9 @@ const EditSeries = ({ user, logoutUser, apiUrl, getSeriesList, deleteSeries, wri
                 setIsLoaded(true);
             }
         })();
-    }, [])
+    }, [seriesList])
 
-    const updateSeries = async updatedSeries => {
-        try {
-            const response = await fetch(`${apiUrl}/series/${seriesId}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${user.token}`
-                },
-                body: JSON.stringify(updatedSeries)
-            });
-            
-            // Logout user if token has expired
-            if ([401, 403].includes(response.status)) {
-                logoutUser();
-            } else {
-                const updatedSeries = await response.json();
-
-                if (!response.ok) {
-                    throw new Error(response.statusText);
-                }
-
-                // Set series to state
-                setSeries(updatedSeries);
-                
-                setError(null);
-            }
-        } catch (err) {
-            setError('Something went wrong when getting a series. Reload page and try again.');
-        } finally {
-            // Get and set the list of series to state in App.js
-            await getSeriesList();
-        }
-    }
-
-    const handleClick = async e => {
+    const handleDelete = async e => {
         e.preventDefault();
         setIsDeletingSeries(true);
     }
@@ -100,12 +77,14 @@ const EditSeries = ({ user, logoutUser, apiUrl, getSeriesList, deleteSeries, wri
         <section className='edit-series'>
             <h1>Edit {series.name}</h1>
             <AddEditForm 
+                user={user}
+                logoutUser={logoutUser} 
+                apiUrl={apiUrl}
                 series={series} 
-                updateSeries={updateSeries} 
-                deleteSeries={deleteSeries}
+                getSeriesList={getSeriesList}
                 writeSuccessMessage={writeSuccessMessage} 
             />
-            <button className='button button-big' onClick={handleClick}>Delete series</button>
+            <button className='button button-big' onClick={handleDelete}>Delete series</button>
             {isDeletingSeries && (
                 <DeletingSeries
                     seriesName={series.name}

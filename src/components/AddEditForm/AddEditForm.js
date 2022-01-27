@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from "react-router-dom";
 
-const AddEditForm = ({ series, createSeries, updateSeries, writeSuccessMessage }) => {
+import Season from './partials/Season';
+
+const AddEditForm = ({ user, logoutUser, apiUrl, series, createSeries, getSeriesList, writeSuccessMessage }) => {
     const [name, setName] = useState('');
     const [plot, setPlot] = useState('');
     const [airingStatus, setAiringStatus] = useState('Airing');
-    const [episodes, setEpisodes] = useState([]);
+    const [seasonList, setSeasonList] = useState([]);
     const [isEditMode, setIsEditMode] = useState(false);
+    const [error, setError] = useState(null);
+
+    let navigate = useNavigate();
 
     // Set series for edit form
     useEffect(() => {
@@ -15,9 +21,76 @@ const AddEditForm = ({ series, createSeries, updateSeries, writeSuccessMessage }
                 setName(series.name);
                 setPlot(series.plot);
                 setAiringStatus(series.airingStatus);
+                setSeasonList(series.seasons);
             }         
         })();
-    }, [])
+    }, [series])
+
+    const updateSeries = async seriesBody => {
+        try {
+            const response = await fetch(`${apiUrl}/series/${series._id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${user.token}`
+                },
+                body: JSON.stringify(seriesBody)
+            });
+            
+            // Logout user if token has expired
+            if ([401, 403].includes(response.status)) {
+                logoutUser();
+            } else {
+                const updatedSeries = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(response.statusText);
+                }
+                
+                setError(null);
+
+                return updatedSeries;
+            }
+        } catch (err) {
+            setError('Something went wrong when updating series. Reload page and try again.');
+        } finally {
+            // Get and set the list of series to state in App.js
+            await getSeriesList();
+        }
+    }
+
+    const addEpisode = async episodeBody => {
+        try {
+            const response = await fetch(`${apiUrl}/series/${series._id}/add-episode`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${user.token}`
+                },
+                body: JSON.stringify(episodeBody)
+            });
+
+            // Logout user if token has expired
+            if ([401, 403].includes(response.status)) {
+                logoutUser();
+            } else {
+                const addedEpisode = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(response.statusText);
+                }
+
+                setError(null);
+
+                return addedEpisode;
+            }
+        } catch (err) {
+            setError('Something went wrong when adding episode. Reload page and try again.');
+        } finally {
+            // Get and set the list of series to state in App.js
+            await getSeriesList();
+        }
+    }
 
     const validateField = async e => {
         const field = e.target;
@@ -84,41 +157,52 @@ const AddEditForm = ({ series, createSeries, updateSeries, writeSuccessMessage }
             await writeErrorMessage(plotField, plotFieldError);
             return;
         }
-        /*const episodeNameFields = document.querySelectorAll(`#${form} .episode-name`);
-        for (let i = 0; i < episodeNameFields.length; i++) {
-            if (!await validateFieldOnSubmit(episodeNameFields[i])) return;
-        }*/
+
+        const seriesBody = {
+            name: name,
+            plot: plot,
+            airingStatus: airingStatus
+        }
 
         if (isEditMode) {
-            const updatedSeries = {
-                name: name,
-                plot: plot,
-                airingStatus: airingStatus
-            }
-
-            await updateSeries(updatedSeries);
+            await updateSeries(seriesBody);
             await writeSuccessMessage('The series was successfully edited!');
         } else {
-            const newSeries = {
-                name: name,
-                plot: plot,
-                airingStatus: airingStatus,
-                episodes: episodes
-            }
-
-            await createSeries(newSeries);
+            const createdSeries = await createSeries(seriesBody);
             await writeSuccessMessage('The series was successfully added!');
 
-            setName('');
-            setPlot('');
-            setAiringStatus('Airing');
-            setEpisodes([]);
+            navigate(`/edit-series/${createdSeries._id}`, { replace: true });
         }
+    }
+
+    const addSeason = async e => {
+        e.preventDefault();
+
+        const seasonNumber = seasonList.length + 1;
+        const newSeason = {
+            number: seasonNumber,
+            episodes: [
+                {
+                    seasonNumber: seasonNumber,
+                    episodeNumber: 1,
+                    name: ''
+                }
+            ]
+        }
+
+        setSeasonList(prev => [...prev, newSeason]);
+    }
+
+    // Show error if there is one
+    if (error) {
+        const message = document.querySelector('.message');
+        message.classList.add('error', 'is-active');
+        message.innerHTML = error;
     }
 
     return (
         <form action='/' onSubmit={handleSubmit} noValidate>
-            <fieldset className='general-information'>
+            <fieldset>
                 <legend>General information</legend>
                 <p className='text-field'>
                     <label htmlFor='name-input'>Name <abbr title='required' className='required'>*</abbr></label>
@@ -138,19 +222,41 @@ const AddEditForm = ({ series, createSeries, updateSeries, writeSuccessMessage }
                         <option value='Ended'>Ended</option>
                     </select>
                 </p>
+                <p className='submit-field'>
+                    {!isEditMode && (
+                        <button type='submit' className='button button-big'>Add series</button>
+                    )}
+                    {isEditMode && (
+                        <button type='submit' className='button button-big'>Save series</button>
+                    )}
+                </p>
             </fieldset>
-            <fieldset className='seasons'>
-                <legend>Seasons</legend>
-                <button className='button button-add-season'>Add season</button>
-            </fieldset>
-            <p className='submit-field'>
-                {!isEditMode && (
-                    <button type='submit' className='button button-big'>Add series</button>
-                )}
-                {isEditMode && (
-                    <button type='submit' className='button button-big'>Edit series</button>
-                )}
-            </p>
+            {isEditMode && (
+                <fieldset className='seasons'>
+                    <legend>Seasons</legend>
+                    {seasonList.length > 0 && (
+                        <ol className='season-list'>
+                            {seasonList.map(season => (
+                                <li key={season.number} className='season'>
+                                    <Season 
+                                        user={user}
+                                        logoutUser={logoutUser} 
+                                        apiUrl={apiUrl}
+                                        seriesId={series._id}
+                                        season={season}
+                                        addEpisode={addEpisode}
+                                        validateField={validateField} 
+                                        writeErrorMessage={writeErrorMessage}
+                                        getSeriesList={getSeriesList}
+                                        writeSuccessMessage={writeSuccessMessage}
+                                    />
+                                </li>
+                            ))}
+                        </ol>
+                    )}
+                    <button className='button button-add-season' onClick={addSeason}>Add season</button>
+                </fieldset>
+            )}
         </form>
     );
 }

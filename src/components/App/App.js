@@ -10,16 +10,17 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Route, Routes, Link } from 'react-router-dom';
 
-import Login from './Login';
+import Login from '../Login';
 
-import Header from './Header';
-import Footer from './Footer';
+import Header from '../Header';
+import Footer from '../Footer';
 
-import SeriesList from './SeriesList/SeriesList';
-import AddSeries from './AddSeries';
-import EditSeries from './EditSeries';
+import SeriesListItem from './partials/SeriesListItem';
+
+import AddSeries from '../AddSeries';
+import EditSeries from '../EditSeries';
  
 const App = () => {
     const [appName] = useState('Series Tracker');
@@ -78,7 +79,7 @@ const App = () => {
     }
 
     // Create series in API
-    const createSeries = async newSeries => {
+    const createSeries = async seriesBody => {
         try {
             const response = await fetch(`${apiUrl}/series`, {
                 method: 'POST',
@@ -86,7 +87,7 @@ const App = () => {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${user.token}`
                 },
-                body: JSON.stringify(newSeries)
+                body: JSON.stringify(seriesBody)
             });
 
             // Logout user if token has expired
@@ -111,7 +112,7 @@ const App = () => {
         }
     }
 
-    // Delete series in API
+    // Delete one series by id in API
     const deleteSeries = async seriesId => {
         try {
             const response = await fetch(`${apiUrl}/series/${seriesId}`, {
@@ -164,7 +165,7 @@ const App = () => {
             const storedUser = getUser();
             if (storedUser === null) return;
 
-            setUser(getUser());
+            setUser(storedUser);
 
             try {
                 const response = await fetch(`${apiUrl}/series`, {
@@ -220,11 +221,23 @@ const App = () => {
                     {isLoaded && (
                         <Routes>
                             <Route path='/' element={
-                                <SeriesList 
-                                    seriesList={seriesList}
-                                    deleteSeries={deleteSeries}
-                                    writeSuccessMessage={writeSuccessMessage}
-                                />
+                                <>
+                                    <h1>Series</h1>
+                                    <ul className='series-list'>
+                                        {seriesList.map(series => (
+                                            <li key={series._id}>
+                                                <SeriesListItem 
+                                                    series={series}
+                                                    deleteSeries={deleteSeries}
+                                                    writeSuccessMessage={writeSuccessMessage}
+                                                />
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    {seriesList.length === 0 &&
+                                        <p>There are no series yet. <Link to='/add-series' className='highlighted-link'>Add a series</Link>!</p>
+                                    }
+                                </>
                             } 
                             />
                             <Route path='add-series' element={
@@ -239,6 +252,7 @@ const App = () => {
                                     user={user}
                                     logoutUser={logoutUser}
                                     apiUrl={apiUrl}
+                                    seriesList={seriesList}
                                     getSeriesList={getSeriesList}
                                     deleteSeries={deleteSeries}
                                     writeSuccessMessage={writeSuccessMessage}
