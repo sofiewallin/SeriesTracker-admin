@@ -1,31 +1,40 @@
+/**
+ * Edit series component.
+ * 
+ * Entry for the Edit series route: /edit-series/:seriesId.
+ * 
+ * Takes a series id as a parameter and gets the series 
+ * from the database. Passes series on to form component
+ * in AddEditForm.js. Component also handles delete of series
+ * from edit view.
+ * 
+ * @author: Sofie Wallin
+ */
+
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 
 import AddEditForm from './AddEditForm/AddEditForm';
 import DeletingSeries from './App/partials/DeletingSeries';
 
-const EditSeries = ({ 
-    user, 
-    logoutUser, 
-    apiUrl, 
-    seriesList, 
-    getSeriesList, 
-    deleteSeries, 
-    writeSuccessMessage 
-}) => {
+const EditSeries = ({ user, logoutUser, apiUrl, seriesList, getSeriesList, deleteSeries, writeMessage }) => {
+    // States
     const { seriesId } = useParams();
+
     const [series, setSeries] = useState(null);
     const [error, setError] = useState(null);
     const [isLoaded, setIsLoaded] = useState(false);
 
     const [isDeletingSeries, setIsDeletingSeries] = useState(false);
 
-    // Get series based on id parameter
+    // Get series based on id parameter when component loads
     useEffect(() => {
         (async () => {
+            // Check if the id parameter matches a series in the list
             const matchingSeries = seriesList.filter(seriesInList => seriesInList._id === seriesId);
             if (matchingSeries.length === 0) return;
             
+            // Get series from database with id
             try {
                 const response = await fetch(`${apiUrl}/series/${seriesId}`, {
                     method: 'GET',
@@ -51,12 +60,13 @@ const EditSeries = ({
                     setError(null);
                 }
             } catch (err) {
-                setError('Something went wrong when getting a series. Reload page and try again.');
+                setError('Something went wrong when getting a series from database. Reload page and try again.');
             } finally {
                 setIsLoaded(true);
             }
         })();
-    }, [seriesList])
+    }, [seriesList]) // Run again if list of series changes
+
 
     const handleDelete = async e => {
         e.preventDefault();
@@ -65,38 +75,37 @@ const EditSeries = ({
 
     // Show error if there is one
     if (error) {
-        const message = document.querySelector('.message');
-        message.classList.add('error', 'is-active');
-        message.innerHTML = error;
+        writeMessage('error', error);
     }
 
     // Show loading message until series is fetched from the API
     if (!isLoaded)return <div className="loading">Loading...</div>;
 
+    // Return component
     return (
         <section className='edit-series'>
-            <h1>Edit {series.name}</h1>
+            <h1 className='heading heading-big'>{series.name}</h1>
             <AddEditForm 
                 user={user}
                 logoutUser={logoutUser} 
                 apiUrl={apiUrl}
                 series={series} 
                 getSeriesList={getSeriesList}
-                writeSuccessMessage={writeSuccessMessage} 
+                writeMessage={writeMessage} 
             />
-            <button className='button button-big' onClick={handleDelete}>Delete series</button>
+            <button className='highlighted-link' onClick={handleDelete}>Delete series</button>
             {isDeletingSeries && (
                 <DeletingSeries
                     seriesName={series.name}
                     seriesId={series._id}
                     deleteSeries={deleteSeries}
-                    fromEdit={true}
                     setIsDeletingSeries={setIsDeletingSeries}
-                    writeSuccessMessage={writeSuccessMessage}
+                    writeMessage={writeMessage}
                 />
             )}
         </section>
     );
 }
 
+// Export component
 export default EditSeries;

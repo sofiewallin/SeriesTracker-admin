@@ -1,8 +1,8 @@
 /**
- * Deleting Series component.
+ * Deleting series component.
  * 
  * Handles prompt when deleting series and uses function
- * to delete series from the list in the App component.
+ * to delete series from the list in App.js.
  * 
  * @author: Sofie Wallin
  */
@@ -10,7 +10,8 @@
 import React from 'react';
 import { useNavigate } from "react-router-dom";
 
-const DeletingSeries = ({ seriesName, seriesId, deleteSeries, fromEdit, setIsDeletingSeries, writeSuccessMessage }) => {
+const DeletingSeries = ({ seriesName, seriesId, deleteSeries, setIsDeletingSeries, writeMessage }) => {
+    // Redirection
     let navigate = useNavigate();
     
     // Handle click on Y/N-buttons
@@ -26,8 +27,10 @@ const DeletingSeries = ({ seriesName, seriesId, deleteSeries, fromEdit, setIsDel
             
             // Delete series
             await deleteSeries(seriesId);
-            await writeSuccessMessage('The series was successfully deleted!');
-            if (fromEdit) navigate('/', { replace: true });
+            await writeMessage('success', 'The series was successfully deleted!');
+
+            // Redirect to list of series
+            navigate('/', { replace: true });
         } else {
             // Close prompt
             setIsDeletingSeries(false);
@@ -47,7 +50,7 @@ const DeletingSeries = ({ seriesName, seriesId, deleteSeries, fromEdit, setIsDel
         <div className='prompt-wrapper'>
             <div className="prompt centered" aria-live="polite">
                 <button className='button-close' onClick={closePrompt}><span className='hidden-visually'>Close</span></button>
-                <h3 className='heading'>Are you sure you want to delete {seriesName}?</h3>
+                <h3 className='heading'>Are you sure you want to delete <em>{seriesName}</em>?</h3>
                 <div className='clear'>
                     <button className='button button-small button-50' value='Yes' onClick={handleClick}>Yes</button>
                     <button className='button button-small button-50' value='No' onClick={handleClick}>No</button>

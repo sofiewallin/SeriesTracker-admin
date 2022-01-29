@@ -3,8 +3,8 @@
  * 
  * Handles getting the list of series from the API and the
  * functions to create series in and delete series from the 
- * list. Also handles the routing of the application and
- * the logout of the user.
+ * list. Also handles the series list output, the routing 
+ * of the application and the logout of the user.
  * 
  * @author: Sofie Wallin
  */
@@ -17,12 +17,11 @@ import Login from '../Login';
 import Header from '../Header';
 import Footer from '../Footer';
 
-import SeriesListItem from './partials/SeriesListItem';
-
 import AddSeries from '../AddSeries';
 import EditSeries from '../EditSeries';
  
 const App = () => {
+    // States
     const [appName] = useState('Series Tracker');
     const [apiUrl] = useState('https://series-tracker-rest-api.herokuapp.com');
 
@@ -46,6 +45,47 @@ const App = () => {
         setUser(null);
         setLoggedIn(false);
     }
+
+    // Set user and get list of series when component loads
+    useEffect(() => {
+        (async () => {
+            // Check if logged in and set user if there is one
+            const storedUser = getUser();
+            if (storedUser === null) return;
+            setUser(storedUser);
+
+            // Get list of series
+            try {
+                const response = await fetch(`${apiUrl}/series`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${storedUser.token}`
+                    }
+                });
+
+                // Logout user if token has expired
+                if ([401, 403].includes(response.status)) {
+                    logoutUser();
+                } else {
+                    const seriesList = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(response.statusText);
+                    }
+
+                    // Set list of series to state
+                    setSeriesList(seriesList);
+
+                    setError(null);
+                }
+            } catch (err) {
+                setError('Something went wrong when getting series from database. Reload page and try again.');
+            } finally {
+                setIsLoaded(true);
+            }
+        })();
+    }, [loggedIn]) // Run again when user logs in
 
     // Get list of series from the API
     const getSeriesList = async () => {
@@ -74,11 +114,11 @@ const App = () => {
                 setError(null);
             }
         } catch (err) {
-            setError('Something went wrong when getting list of series. Reload page and try again.');
+            setError('Something went wrong when getting series from database. Reload page and try again.');
         }
     }
 
-    // Create series in API
+    // Create one series in API
     const createSeries = async seriesBody => {
         try {
             const response = await fetch(`${apiUrl}/series`, {
@@ -105,14 +145,14 @@ const App = () => {
                 return createdSeries;
             }
         } catch (err) {
-            setError('Something went wrong when creating series. Reload page and try again.');
+            setError('Something went wrong when creating series in database. Reload page and try again.');
         } finally {
             // Get and set the list of series to state
             await getSeriesList();
         }
     }
 
-    // Delete one series by id in API
+    // Delete one series in API
     const deleteSeries = async seriesId => {
         try {
             const response = await fetch(`${apiUrl}/series/${seriesId}`, {
@@ -138,7 +178,7 @@ const App = () => {
                 return deletedSeries;
             }
         } catch (err) {
-            setError('Something went wrong when deleting series. Reload page and try again.');
+            setError('Something went wrong when deleting series in database. Reload page and try again.');
         } finally {
             // Get and set the list of series to state
             await getSeriesList();
@@ -159,45 +199,23 @@ const App = () => {
         }, 3000);
     }
 
-    // Get list  of series when the component loads
-    useEffect(() => {
-        (async () => {
-            const storedUser = getUser();
-            if (storedUser === null) return;
+    // Write success message on create, delete and update
+    const writeMessage = async (type, message) => {
+        const messageElement = document.querySelector('.message');
 
-            setUser(storedUser);
+        messageElement.classList.add(type, 'is-active');
+        messageElement.innerHTML = message;
+        
+        if (type === 'success') {
+            let timer = null;
 
-            try {
-                const response = await fetch(`${apiUrl}/series`, {
-                    method: 'GET',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${storedUser.token}`
-                    }
-                });
-
-                // Logout user if token has expired
-                if ([401, 403].includes(response.status)) {
-                    logoutUser();
-                } else {
-                    const seriesList = await response.json();
-
-                    if (!response.ok) {
-                        throw new Error(response.statusText);
-                    }
-
-                    // Set list of series to state
-                    setSeriesList(seriesList);
-
-                    setError(null);
-                }
-            } catch (err) {
-                setError('Something went wrong when getting list of series. Reload page and try again.');
-            } finally {
-                setIsLoaded(true);
-            }
-        })();
-    }, [loggedIn]) // Run again when user logs in
+            window.clearTimeout(timer);
+            timer = window.setTimeout(function () {
+                messageElement.classList.remove('success', 'is-active');
+                messageElement.innerHTML = '';
+            }, 3000);
+        }
+    }
 
     // Show Login component if there is no user in local storage
     if (!user) {
@@ -206,9 +224,7 @@ const App = () => {
 
     // Show error if there is one
     if (error) {
-        const message = document.querySelector('.message');
-        message.classList.add('error', 'is-active');
-        message.innerHTML = error;
+        writeMessage('error', error);
     }
     
     // Return component with the router
@@ -222,15 +238,14 @@ const App = () => {
                         <Routes>
                             <Route path='/' element={
                                 <>
-                                    <h1>Series</h1>
+                                    <h1 className='heading heading-big'>Series</h1>
                                     <ul className='series-list'>
                                         {seriesList.map(series => (
                                             <li key={series._id}>
-                                                <SeriesListItem 
-                                                    series={series}
-                                                    deleteSeries={deleteSeries}
-                                                    writeSuccessMessage={writeSuccessMessage}
-                                                />
+                                                <article id={`series-${series._id}`} className='series-list-item box clear'>
+                                                    <h2 className='heading heading-list-item'>{series.name}</h2>
+                                                    <Link to={`edit-series/${series._id}`} className='button button-icon button-edit'><span className='hidden-visually'>Edit</span></Link>
+                                                </article>
                                             </li>
                                         ))}
                                     </ul>
@@ -243,7 +258,7 @@ const App = () => {
                             <Route path='add-series' element={
                                 <AddSeries
                                     createSeries={createSeries}
-                                    writeSuccessMessage={writeSuccessMessage}
+                                    writeMessage={writeMessage}
                                 />
                             } 
                             />
@@ -255,7 +270,7 @@ const App = () => {
                                     seriesList={seriesList}
                                     getSeriesList={getSeriesList}
                                     deleteSeries={deleteSeries}
-                                    writeSuccessMessage={writeSuccessMessage}
+                                    writeMessage={writeMessage}
                                 />
                             } 
                             />    

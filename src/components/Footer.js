@@ -7,7 +7,7 @@
 import React from 'react';
 
 const Footer = ({ appName, logoutUser }) => {
-    // Handle the click event of the "Sign out" button
+    // Handle the click event of the sign out button
     const handleClick = async e => {
         e.preventDefault();
 

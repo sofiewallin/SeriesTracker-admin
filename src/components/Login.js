@@ -93,7 +93,7 @@ const Login = ({ appName, apiUrl, setLoggedIn }) => {
             </header>
             <main id='main-content' className='login-content'>
                 <form action='/' className='login-form' onSubmit={handleSubmit}>
-                    <h1 className='heading heading-big centered'>Sign in</h1>
+                    <h1 className='heading heading-big centered'>Administration</h1>
                     <div className='message' aria-live='polite'></div>
                     <p className='text-field box'>
                         <label htmlFor='username-input'>Username</label>
