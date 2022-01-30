@@ -12,13 +12,13 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Route, Routes, Link } from 'react-router-dom';
 
-import Login from '../Login';
+import Login from './Login';
 
-import Header from '../Header';
-import Footer from '../Footer';
+import Header from './Header';
+import Footer from './Footer';
 
-import AddSeries from '../AddSeries';
-import EditSeries from '../EditSeries';
+import AddSeries from './AddSeries';
+import EditSeries from './EditSeries/EditSeries';
  
 const App = () => {
     // States
@@ -183,20 +183,6 @@ const App = () => {
             // Get and set the list of series to state
             await getSeriesList();
         }
-    }
-
-    // Write success message on create, delete and update
-    const writeSuccessMessage = async message => {
-        const messageElement = document.querySelector('.message');
-
-        let timer = null;
-        messageElement.classList.add('success', 'is-active');
-        messageElement.innerHTML = message;
-
-        window.clearTimeout(timer);
-        timer = window.setTimeout(function () {
-            messageElement.classList.remove('success', 'is-active');
-        }, 3000);
     }
 
     // Write success message on create, delete and update

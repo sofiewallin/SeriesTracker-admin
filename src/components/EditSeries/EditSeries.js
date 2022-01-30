@@ -14,8 +14,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 
-import AddEditForm from './AddEditForm/AddEditForm';
-import DeletingSeries from './App/partials/DeletingSeries';
+import AddEditForm from '../AddEditForm/AddEditForm';
+import DeletingSeries from './partials/DeletingSeries';
 
 const EditSeries = ({ user, logoutUser, apiUrl, seriesList, getSeriesList, deleteSeries, writeMessage }) => {
     // States
